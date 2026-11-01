@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>صانع أفتار تويتش المتحرك</title>
+<script>window.exports={};</script>
+<script src="https://cdn.jsdelivr.net/npm/omggif@1.0.10/omggif.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.js"></script>
+<style>
+:root{--bg:#f5f3fa;--card:#fff;--text:#1c1a24;--muted:#6b6780;--accent:#9146ff;--border:#ddd8ea;--onaccent:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#18161f;--card:#232030;--text:#f1eef8;--muted:#a49fbb;--border:#38334a}}
+:root[data-theme="dark"]{--bg:#18161f;--card:#232030;--text:#f1eef8;--muted:#a49fbb;--border:#38334a}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI",Tahoma,system-ui,sans-serif;line-height:1.6}
+main{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:22px;margin:0 0 4px}
+p.sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px}
+label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+select,input[type=color],input[type=range]{width:100%}
+select{padding:9px;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:15px}
+input[type=color]{height:38px;border:1px solid var(--border);border-radius:8px;background:var(--bg);padding:2px}
+.drop{border:2px dashed var(--border);border-radius:12px;padding:26px;text-align:center;cursor:pointer;color:var(--muted)}
+.drop.has{padding:10px}
+.drop:hover{border-color:var(--accent)}
+button,a.btn{display:block;width:100%;padding:13px;border:0;border-radius:10px;background:var(--accent);color:var(--onaccent);font-size:16px;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;margin-top:12px;font-family:inherit}
+button:disabled{opacity:.5;cursor:default}
+#out{display:none;text-align:center}
+#out img{width:240px;max-width:100%;border-radius:50%;border:3px solid var(--accent)}
+#info{font-size:13px;color:var(--muted);margin-top:8px}
+#prev{max-width:100%;max-height:200px;border-radius:8px}
+#tag{font-size:13px;color:var(--accent);margin-top:8px}
+</style>
+</head>
+<body>
+<main>
+<h1>صانع أفتار تويتش المتحرك</h1>
+<p class="sub">حط صورة أو GIF، والأداة تقصه مربع وتضغطه تحت 10 ميجا وتجهزه لتويتش.</p>
+
+<div class="card">
+  <div class="drop" id="drop">اضغط هنا أو اسحب صورتك أو الـ GIF</div>
+  <input type="file" id="file" accept="image/*" hidden>
+  <div id="tag"></div>
+
+  <label for="px">موضع القص (يمين ← يسار) للصور العريضة</label>
+  <input type="range" id="px" min="0" max="100" value="50">
+
+  <label for="fx">نوع الحركة</label>
+  <select id="fx">
+    <option value="none">بدون إضافة (حركة الـ GIF الأصلية)</option>
+    <option value="float">طفو (فوق وتحت)</option>
+    <option value="pulse">نبض (تكبير وتصغير)</option>
+    <option value="spin">دوران</option>
+    <option value="shake">اهتزاز</option>
+    <option value="hue">تغيّر الألوان</option>
+    <option value="zoom">زوم ناعم</option>
+  </select>
+
+  <label for="spd">السرعة</label>
+  <select id="spd">
+    <option value="1.6">بطيئة</option>
+    <option value="1" selected>متوسطة / الأصلية</option>
+    <option value="0.6">سريعة</option>
+  </select>
+
+  <label for="size">الحجم</label>
+  <select id="size">
+    <option value="256">256 (أخف)</option>
+    <option value="400" selected>400 (موصى به)</option>
+    <option value="512">512 (أوضح)</option>
+  </select>
+
+  <label for="bg">لون الخلفية (للأطراف)</label>
+  <input type="color" id="bg" value="#18161f">
+
+  <button id="go" disabled>سوّي الـ GIF</button>
+</div>
+
+<div class="card" id="out">
+  <img id="res" alt="النتيجة">
+  <div id="info"></div>
+  <a class="btn" id="dl" download="twitch-avatar.gif">تنزيل الـ GIF</a>
+  <p class="sub" style="margin-top:12px">بعدها: تويتش ← الإعدادات ← الملف الشخصي ← إضافة صورة ← احفظ التغييرات.</p>
+</div>
+</main>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var src=null,frames=null,url=null;
+  var drop=$('drop'),file=$('file'),go=$('go');
+  drop.onclick=function(){file.click()};
+  drop.ondragover=function(e){e.preventDefault()};
+  drop.ondrop=function(e){e.preventDefault();load(e.dataTransfer.files[0])};
+  file.onchange=function(){load(file.files[0])};
+
+  function ready(u,tag){
+    drop.className='drop has';
+    drop.innerHTML='<img id="prev" src="'+u+'" alt="">';
+    $('tag').textContent=tag;
+    go.disabled=false;
+  }
+
+  function load(f){
+    if(!f||f.type.indexOf('image')!==0)return;
+    var u=URL.createObjectURL(f);
+    frames=null;
+    var im=new Image();
+    im.onload=function(){
+      src=im;
+      if(f.type==='image/gif'){
+        f.arrayBuffer().then(function(b){
+          try{
+            frames=decodeGif(new Uint8Array(b));
+            $('fx').value='none';
+            ready(u,'GIF متحرك: '+frames.length+' إطار');
+          }catch(e){ready(u,'صورة ثابتة')}
+        });
+      }else{
+        if($('fx').value==='none')$('fx').value='float';
+        ready(u,'صورة ثابتة');
+      }
+    };
+    im.src=u;
+  }
+
+  function decodeGif(bytes){
+    var r=new window.exports.GifReader(bytes),W=r.width,H=r.height,n=r.numFrames();
+    var buf=new Uint8ClampedArray(W*H*4),out=[],prev=null;
+    var step=Math.max(1,Math.ceil(n/90));
+    var tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;
+    var tc=tmp.getContext('2d');
+    var acc=0;
+    for(var i=0;i<n;i++){
+      var info=r.frameInfo(i);
+      if(prev&&prev.disposal===2){
+        for(var y=prev.y;y<prev.y+prev.height;y++)for(var x=prev.x;x<prev.x+prev.width;x++){buf.fill(0,(y*W+x)*4,(y*W+x)*4+4)}
+      }
+      r.decodeAndBlitFrameRGBA(i,buf);
+      prev=info;
+      acc+=Math.max(2,info.delay||10)*10;
+      if(i%step===0){
+        tc.putImageData(new ImageData(new Uint8ClampedArray(buf),W,H),0,0);
+        var c=document.createElement('canvas');c.width=W;c.height=H;
+        c.getContext('2d').drawImage(tmp,0,0);
+        out.push({c:c,d:acc});acc=0;
+      }
+    }
+    return out;
+  }
+
+  function frame(ctx,S,fx,t,im,px){
+    var tau=Math.PI*2,s=1,dx=0,dy=0,r=0;
+    ctx.filter='none';
+    if(fx==='float'){dy=Math.sin(tau*t)*S*0.04;s=1.1}
+    else if(fx==='pulse'){s=1.03+0.07*(0.5+0.5*Math.sin(tau*t))}
+    else if(fx==='spin'){r=tau*t;s=1.45}
+    else if(fx==='shake'){dx=Math.sin(tau*2*t)*S*0.03;r=Math.sin(tau*2*t)*0.05;s=1.12}
+    else if(fx==='hue'){ctx.filter='hue-rotate('+Math.round(360*t)+'deg)'}
+    else if(fx==='zoom'){s=1+0.18*(0.5-0.5*Math.cos(tau*t))}
+    var k=S/Math.min(im.width,im.height),w=im.width*k,h=im.height*k;
+    var ox=Math.max(0,w-S)*(0.5-px),oy=Math.max(0,h-S)*(0.5-px);
+    ctx.save();
+    ctx.translate(S/2+dx,S/2+dy);
+    ctx.rotate(r);
+    ctx.scale(s,s);
+    ctx.drawImage(im,-w/2+ox,-h/2+oy,w,h);
+    ctx.restore();
+    ctx.filter='none';
+  }
+
+  function build(S,fx,sp,px){
+    var N=frames?frames.length:24;
+    var c=document.createElement('canvas');c.width=c.height=S;
+    var ctx=c.getContext('2d',{willReadFrequently:true});
+    var enc=gifenc.GIFEncoder();
+    for(var i=0;i<N;i++){
+      ctx.fillStyle=$('bg').value;ctx.fillRect(0,0,S,S);
+      frame(ctx,S,fx,i/N,frames?frames[i].c:src,px);
+      var d=ctx.getImageData(0,0,S,S).data;
+      var pal=gifenc.quantize(d,256);
+      var idx=gifenc.applyPalette(d,pal);
+      var delay=frames?Math.max(20,Math.round(frames[i].d*sp)):Math.round(40*sp);
+      enc.writeFrame(idx,S,S,{palette:pal,delay:delay});
+    }
+    enc.finish();
+    return new Blob([enc.bytes()],{type:'image/gif'});
+  }
+
+  go.onclick=function(){
+    if(!src)return;
+    if(typeof gifenc==='undefined'){alert('تعذر تحميل مكتبة الـ GIF. تأكد من الإنترنت وحدّث الصفحة.');return}
+    go.disabled=true;go.textContent='جاري العمل...';
+    setTimeout(function(){
+      try{
+        var S=parseInt($('size').value,10),fx=$('fx').value,sp=parseFloat($('spd').value),px=parseInt($('px').value,10)/100;
+        if(fx==='none'&&!frames)fx='float';
+        var blob=build(S,fx,sp,px),note='';
+        while(blob.size>10*1048576&&S>200){S=Math.round(S*0.8);blob=build(S,fx,sp,px);note=' (تصغّر تلقائياً ليناسب حد تويتش)'}
+        if(url)URL.revokeObjectURL(url);
+        url=URL.createObjectURL(blob);
+        $('res').src=url;$('dl').href=url;
+        $('info').textContent=S+'×'+S+' — '+(blob.size/1048576).toFixed(2)+' ميجا'+note;
+        $('out').style.display='block';
+        $('out').scrollIntoView({behavior:'smooth'});
+      }catch(e){alert('صار خطأ: '+e.message)}
+      go.disabled=false;go.textContent='سوّي الـ GIF';
+    },30);
+  };
+})();
+</script>
+</body>
+</html>
